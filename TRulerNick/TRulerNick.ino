@@ -1,0 +1,248 @@
+#include "AXS15231B.h"
+#include <TFT_eSPI.h>
+#include <Wire.h>
+#include "pins_config.h"
+#include "fontM.h"
+#include "fontH.h"
+#include "fontS.h"
+#include "fontT.h"
+#include "yt.h"
+// For bitmap encoding: use Image2lcd, 16bit true colour, MSB First, RGB565, don't include head data, be sure to set max image size, save as .h file.
+
+TFT_eSPI tft = TFT_eSPI();
+TFT_eSprite sprite = TFT_eSprite(&tft);
+uint8_t ALS_ADDRESS = 0x3B;
+uint8_t read_touchpad_cmd[11] = {0xb5, 0xab, 0xa5, 0x5a, 0x0, 0x0, 0x0, 0x8};
+int tx=0;
+int ty=0;
+int cx=-1;
+int cy=-1;
+int xpos[4]={4,48,92,136};
+int ypos[4]={4,48,92,136};
+String btns[4][4]={{"7","8","9","/"},{"4","5","6","*"},{"1","2","3","-"},{"0",".","=","+"}};
+String num="";
+int deb=0;
+int n=0;
+int operation=0;
+float numBuf=0;
+bool touch_held=false;
+#define time_out_reset 30000
+int touch_timeout=time_out_reset;
+
+//colors
+unsigned short col1=0x39C7;
+unsigned short col2=0x2945;
+unsigned short col3=TFT_ORANGE;
+unsigned short col4=TFT_SILVER;
+unsigned short cls[4][4]={{col1,col1,col1,col2},{col1,col1,col1,col2},{col1,col1,col1,col2},{col1,col2,col2,col2}}; 
+unsigned short tcls[4][4]={{col4,col4,col4,col3},{col4,col4,col4,col3},{col4,col4,col4,col3},{col4,col3,col3,col3}}; 
+
+   
+void draw()
+{
+ sprite.fillSprite(TFT_BLACK);
+  //sprite.drawString(String(cx)+" "+String(tx),460,8,2);
+  //sprite.drawString(String(cy)+" "+String(ty),460,24,2);
+ //sprite.drawString(String(cy)+" "+String(ty)+"   "+String(n),200,20,2);
+
+ sprite.loadFont(fontM);
+ sprite.setTextDatum(0);
+ sprite.fillRoundRect(190,48,460,106,2,col2);
+ sprite.setTextColor(TFT_ORANGE,TFT_BLACK);
+ sprite.drawString("CLEAR",576,8);
+ sprite.fillRect(556,34,80,6,TFT_BLUE);
+ 
+ sprite.setTextDatum(4);
+ for(int i=0;i<4;i++)
+ for(int j=0;j<4;j++){
+ sprite.setTextColor(tcls[i][j],cls[i][j]);
+ sprite.fillRoundRect(xpos[j],ypos[i],40,40,4,cls[i][j]);
+ sprite.drawString(btns[i][j],xpos[j]+20,ypos[i]+20,4);
+ if(cx==j && cy==i)
+ sprite.fillCircle(xpos[j]+8,ypos[i]+8,4,TFT_RED);
+ }
+ 
+ sprite.unloadFont();
+ sprite.setTextDatum(0);
+ sprite.loadFont(fontT);
+ sprite.setTextColor(TFT_SILVER,TFT_BLACK);
+ sprite.drawString("T-DISPLAY S3 LONG",190,8);
+
+ sprite.unloadFont();
+ sprite.loadFont(fontH);
+ sprite.setTextColor(TFT_SILVER,col2);
+
+ bool lastDot=false;
+ if(num.charAt(num.length()-1)=='.')
+ lastDot=true;
+
+ if(num!="" && lastDot==0){
+ int nn=num.toInt();
+ float nl=num.toFloat()*1000;
+ if((nl-(nn*1000))==0)
+ sprite.drawString(String(nn),210,58);
+ else
+ sprite.drawString(num,210,58);
+ sprite.unloadFont();
+ }
+ if(lastDot)
+ sprite.drawString(num,210,58);
+
+ sprite.loadFont(fontS);
+ sprite.setTextColor(col3,TFT_BLACK);
+ sprite.drawString("NikTheFix ",190,161);
+
+ sprite.setTextColor(0x8410,TFT_BLACK);
+ sprite.drawString("VOLOS PROJECTS ",494,161);
+ sprite.pushImage(604,158,30,20,yt);
+ lcd_PushColors_rotated_90(0, 0, 640, 180, (uint16_t*)sprite.getPointer());
+
+}
+
+    
+void setup() {
+
+    pinMode(TOUCH_INT, INPUT_PULLUP);
+    sprite.createSprite(640, 180);    // full screen landscape sprite in psram
+    sprite.setSwapBytes(1);
+    pinMode(TFT_BL, OUTPUT);
+    digitalWrite(TFT_BL, HIGH);
+      // set brightness
+      ledcSetup(0, 10000, 8);
+    ledcAttachPin(1, 0);
+    ledcWrite(0, 30);
+
+    //ini touch screen 
+    pinMode(TOUCH_RES, OUTPUT);
+    digitalWrite(TOUCH_RES, HIGH);delay(2);
+    digitalWrite(TOUCH_RES, LOW);delay(10);
+    digitalWrite(TOUCH_RES, HIGH);delay(2);
+    Wire.begin(TOUCH_IICSDA, TOUCH_IICSCL);
+
+    //init display 
+    axs15231_init();
+    draw();
+    
+}
+
+void getTouch()
+{
+    if(touch_held==true) return;
+
+    uint8_t buff[20] = {0};
+    Wire.beginTransmission(ALS_ADDRESS);
+    Wire.write(read_touchpad_cmd, 8);
+    Wire.endTransmission();
+    Wire.requestFrom(ALS_ADDRESS, 8);
+    while (!Wire.available());
+    Wire.readBytes(buff, 8);
+
+    int pointX=-1;
+    int pointY=-1;
+    int type = 0;
+
+    type = AXS_GET_GESTURE_TYPE(buff);
+    pointX = AXS_GET_POINT_X(buff,0);
+    pointY = AXS_GET_POINT_Y(buff,0);
+
+        if(pointX > 640) pointX = 640;
+        if(pointY > 180) pointY = 180;
+
+        
+        tx=map(pointX,627,10,0,640);
+        ty=map(pointY,180,0,0,180);
+        
+        for(int i=0;i<4;i++)
+        {if(tx>xpos[i] && tx<xpos[i]+44)
+        cx=i;
+        if(ty>ypos[i] && ty<ypos[i]+44)
+        cy=i;}
+
+        if(tx>=590 && tx<=640 && ty>=0 && ty<=50)
+        {num=""; numBuf=0; operation=0; cx=-1; cy=-1;}
+
+    if (cx>=0 && cx<4 && cy>=0 && cy<4 ) {
+        String cs=btns[cy][cx];
+        
+        if(cs=="1" || cs=="2" || cs=="3" || cs=="4" || cs=="5" || cs=="6" || cs=="7" || cs=="8" || cs=="9" || cs=="0")
+        {num=num+cs; if(num.length()>7) {num=""; numBuf=0; operation=0; cx=-1; cy=-1;}}
+
+        if(cs==".")
+        {
+          bool finded=0;
+          for(int i=0;i<num.length();i++)
+          if(num.charAt(i)=='.')
+          finded=true;
+
+          if(!finded)
+          num=num+cs;
+        }
+
+        if(cs=="+")
+        {operation=1; numBuf=num.toFloat();
+        num="";
+        }   
+
+        if(cs=="-")
+        {operation=2; numBuf=num.toFloat();
+        num="";
+        } 
+
+         if(cs=="*")
+        {operation=3; numBuf=num.toFloat();
+        num="";
+        } 
+
+         if(cs=="/")
+        {operation=4; numBuf=num.toFloat();
+        num="";
+        } 
+
+        if(cs=="=")
+        {
+          
+        if(operation==1) 
+        {numBuf=numBuf+num.toFloat();
+        num=String(numBuf);}
+
+        if(operation==2) 
+        {numBuf=numBuf-num.toFloat();
+        num=String(numBuf);}
+
+        if(operation==3) 
+        {numBuf=numBuf*num.toFloat();
+        num=String(numBuf);}
+
+        if(operation==4) 
+        {numBuf=numBuf/num.toFloat();
+        num=String(numBuf);}
+        
+        } 
+        
+    }     
+}
+
+
+void loop() {     
+
+  if(digitalRead(TOUCH_INT)==0)
+    {
+     n++;
+     getTouch();
+     draw();
+     touch_held=true;
+     touch_timeout=time_out_reset;
+    }
+
+  else 
+    {
+      touch_timeout--;
+      if(touch_timeout == 0) 
+      {
+      touch_held=false;
+      touch_timeout=time_out_reset;
+      }
+    } 
+}
+
+
