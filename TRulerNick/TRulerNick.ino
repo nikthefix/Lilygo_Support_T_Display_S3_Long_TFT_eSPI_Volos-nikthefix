@@ -105,12 +105,17 @@ void setup() {
     pinMode(TOUCH_INT, INPUT_PULLUP);
     sprite.createSprite(640, 180);    // full screen landscape sprite in psram
     sprite.setSwapBytes(1);
-   // pinMode(TFT_BL, OUTPUT);
-  //  digitalWrite(TFT_BL, HIGH);
-      // set brightness
-   //   ledcSetup(0, 10000, 8);
- //   ledcAttachPin(1, 0);
-  //  ledcWrite(0, 30);
+
+    // comment out if using variable brightness
+    pinMode(TFT_BL, OUTPUT);
+    digitalWrite(TFT_BL, HIGH);
+
+
+    // if using esp32 3.0.0-alpha3 then you can use the following 2 lines to adjust the backlight brightness
+    //ledcAttach(TFT_BL, 10000, 8);// pin, pwm freq, resolution in bits
+    //ledcWrite(TFT_BL, 30);// pin, pulse width (a.k.a brightness 0-255)
+
+    
 
     //ini touch screen 
     pinMode(TOUCH_RES, OUTPUT);
