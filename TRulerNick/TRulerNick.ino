@@ -1,3 +1,30 @@
+/*
+  For Lilygo T-Display-S3-Long 
+  nikthefix - 20th Dec 2023
+  Modified driver code and example sketch using TFT_eSPI in 'sprite only mode' 
+
+  Versions:
+  TFT_eSPI 2.5.34 - latest at time of writing
+  ESP32 Arduino 3.0.0-alpha3 - latest at time of writing
+
+  Notes:
+  As the display doesn't implement a scan orientation hardware rotate - as far as I can see from the current datasheet - we need to use 
+  a soft matrix rotation to get a landscape view without messing with TFT_eSPI. This is implemented in lcd_PushColors_rotated_90().
+  You can then use lcd_setRotation(2) which IS hardware implemented, to flip the whole thing upside down if you need.
+  In this case you would need to manually flip your touch coordinates in getTouch()
+  Code has been stripped down to support QSPI display only.
+
+  Build Options:
+  Board  ESP32-S3-Dev
+  USB CDC On boot Enabled
+  Flash Size 16MB
+  Partition Scheme 16M Flash(3MB APP/9.9MB FATFS)
+  PSRAM "OPI PSRAM"
+
+  Since ESP32 Arduino 3.0.0-alpha3 is still pretty funky with a lot of existing Arduino driver code it may be necessary to downgrade to V2.xx as the project expands - in the short term
+*/
+
+
 #include "AXS15231B.h"
 #include <TFT_eSPI.h>
 #include <Wire.h>
