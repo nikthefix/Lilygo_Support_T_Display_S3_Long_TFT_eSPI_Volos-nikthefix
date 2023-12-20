@@ -105,12 +105,12 @@ void setup() {
     pinMode(TOUCH_INT, INPUT_PULLUP);
     sprite.createSprite(640, 180);    // full screen landscape sprite in psram
     sprite.setSwapBytes(1);
-    pinMode(TFT_BL, OUTPUT);
-    digitalWrite(TFT_BL, HIGH);
+   // pinMode(TFT_BL, OUTPUT);
+  //  digitalWrite(TFT_BL, HIGH);
       // set brightness
-      ledcSetup(0, 10000, 8);
-    ledcAttachPin(1, 0);
-    ledcWrite(0, 30);
+   //   ledcSetup(0, 10000, 8);
+ //   ledcAttachPin(1, 0);
+  //  ledcWrite(0, 30);
 
     //ini touch screen 
     pinMode(TOUCH_RES, OUTPUT);
