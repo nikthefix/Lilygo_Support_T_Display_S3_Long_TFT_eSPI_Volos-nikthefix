@@ -3,6 +3,8 @@
   nikthefix - 20th Dec 2023
   Modified driver code and example sketch using TFT_eSPI in 'sprite only mode' 
 
+  Calculator GUI and implementation by Volos Projects
+
   Versions:
   TFT_eSPI 2.5.34 - latest at time of writing
   ESP32 Arduino 3.0.0-alpha3 - latest at time of writing
@@ -22,6 +24,14 @@
   PSRAM "OPI PSRAM"
 
   Since ESP32 Arduino 3.0.0-alpha3 is still pretty funky with a lot of existing Arduino driver code it may be necessary to downgrade to V2.xx as the project expands - in the short term
+
+  ToDo: 
+  
+  Tidy up display driver code. Much of what's there is redundant unless you decide to use it. But the compiler knows what's not needed so there is no penalty for keeping it there.
+  This demo currently uses a full screen buffer/sprite to update the whole display at about 15FPS with SPI at 30Mhz. I will update the driver to allow a partial refresh for much faster animations etc.
+  This has already been implemented in my LVGL odometer example and it makes a huge difference. I will migrate those changes to the TFT_eSPI scenario asap.
+
+  
 */
 
 
