@@ -1,9 +1,12 @@
 /*
   For Lilygo T-Display-S3-Long 
   nikthefix - 20th Dec 2023
+
+  Updated on 26th March 2024 to fix spurious touch response.
+
   Modified driver code and example sketch using TFT_eSPI in 'sprite only mode' 
 
-  Calculator GUI and implementation by Volos Projects
+  Calculator GUI and implementation by Volos Projects.
 
   Versions:
   TFT_eSPI 2.5.34 - latest at time of writing
@@ -59,12 +62,12 @@ int ypos[4]={4,48,92,136};
 String btns[4][4]={{"7","8","9","/"},{"4","5","6","*"},{"1","2","3","-"},{"0",".","=","+"}};
 String num="";
 int deb=0;
-int n=0;
 int operation=0;
 float numBuf=0;
 bool touch_held=false;
 #define time_out_reset 30000
-int touch_timeout=time_out_reset;
+uint16_t touch_timeout=0;
+uint16_t cnt=0;
 
 //colors
 unsigned short col1=0x39C7;
@@ -138,7 +141,6 @@ void draw()
 
     
 void setup() {
-
     pinMode(TOUCH_INT, INPUT_PULLUP);
     sprite.createSprite(640, 180);    // full screen landscape sprite in psram
     sprite.setSwapBytes(1);
@@ -169,8 +171,6 @@ void setup() {
 
 void getTouch()
 {
-    if(touch_held==true) return;
-
     uint8_t buff[20] = {0};
     Wire.beginTransmission(ALS_ADDRESS);
     Wire.write(read_touchpad_cmd, 8);
@@ -194,6 +194,9 @@ void getTouch()
         tx=map(pointX,627,10,0,640);
         ty=map(pointY,180,0,0,180);
         
+        if(tx>180 && tx<590) return;  //mask invalid touch area
+        if(ty>50 && tx>590) return;   //mask invalid tough area
+
         for(int i=0;i<4;i++)
         {if(tx>xpos[i] && tx<xpos[i]+44)
         cx=i;
@@ -259,32 +262,31 @@ void getTouch()
         {numBuf=numBuf/num.toFloat();
         num=String(numBuf);}
         
-        } 
-        
+        }        
     }     
 }
 
 
-void loop() {     
-
-  if(digitalRead(TOUCH_INT)==0)
+void loop() 
+{     
+  if(digitalRead(TOUCH_INT)==LOW) 
     {
-     n++;
-     getTouch();
-     draw();
-     touch_held=true;
-     touch_timeout=time_out_reset;
-    }
+      if(touch_held==false)
+        {
+        getTouch();
+        draw();
+        }
+      touch_held=true;
+      touch_timeout=0;
+    }    
 
-  else 
+  touch_timeout++;
+
+  if(touch_timeout >= time_out_reset) 
     {
-      touch_timeout--;
-      if(touch_timeout == 0) 
-      {
-      touch_held=false;
-      touch_timeout=time_out_reset;
-      }
-    } 
+    touch_held=false;
+    touch_timeout=time_out_reset;
+    }   
 }
 
 
